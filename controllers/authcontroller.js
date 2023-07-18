@@ -7,13 +7,13 @@ module.exports.login_get = (req, res) => {
 };
 
 module.exports.signup_post = (req, res) => {
-  res.json({
-    msg: "signup successfuly",
-  });
+  const { email, password } = req.body;
+  console.log(email, password);
+  res.json(req.body);
 };
 
 module.exports.login_post = (req, res) => {
-  res.json({
-    msg: "login successfuly",
-  });
+  const { email, password } = req.body;
+  console.log(email, password);
+  res.json(req.body);
 };
