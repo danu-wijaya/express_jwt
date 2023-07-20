@@ -1,38 +1,27 @@
-const express = require("express"); // Mengimpor modul express untuk membuat dan mengelola aplikasi web
-const mongoose = require("mongoose"); // Mengimpor modul mongoose untuk berinteraksi dengan MongoDB
-const authRoutes = require("./routes/authRoutes"); // Mengimpor rute yang berhubungan dengan autentikasi dari berkas 'authRoutes'
-const cookieParser = require("cookie-parser"); // Mengimpor modul cookie-parser untuk bekerja dengan cookies
+const express = require('express');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');
+const cookieParser = require('cookie-parser');
+const { requireAuth, checkUser } = require('./middleware/authMiddleware');
 
-const app = express(); // Membuat instance dari aplikasi express
+const app = express();
 
-// Middleware untuk mengizinkan parsing JSON dari body request
+// middleware
+app.use(express.static('public'));
 app.use(express.json());
+app.use(cookieParser());
 
-// Middleware untuk mengakses file statis di folder 'public'
-app.use(express.static("public"));
+// view engine
+app.set('view engine', 'ejs');
 
-app.use(cookieParser()); // Menggunakan cookie-parser sebagai middleware untuk bekerja dengan cookies
+// database connection
+const dbURI = "mongodb://localhost:27017/node-auth";
+mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex:true })
+  .then((result) => app.listen(3000))
+  .catch((err) => console.log(err));
 
-// Mengatur view engine menjadi EJS (Embedded JavaScript)
-app.set("view engine", "ejs");
-
-// Menghubungkan aplikasi ke database MongoDB
-const dbURI = "mongodb://localhost:27017/node-auth"; // URI (Uniform Resource Identifier) untuk database MongoDB
-mongoose
-  .connect(dbURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-  }) // Menggunakan method connect dari mongoose untuk terhubung ke database
-  .then((result) => app.listen(3000)) // Jika koneksi berhasil, aplikasi akan mendengarkan permintaan pada port 3000
-  .catch((err) => console.log(err)); // Jika koneksi gagal, pesan error akan dicetak ke konsol
-
-// Rute untuk halaman utama ('/') yang merender view 'home'
-app.get("/", (req, res) => res.render("home"));
-
-// Rute untuk halaman 'smoothies' yang merender view 'smoothies'
-app.get("/smoothies", (req, res) => res.render("smoothies"));
-
-// Menggunakan rute yang berhubungan dengan autentikasi yang telah diimpor sebelumnya
-app.use(authRoutes); // Menggunakan rute yang berhubungan dengan autentikasi yang telah diimpor dari 'authRoutes'
-
+// routes
+app.get('*', checkUser);
+app.get('/', (req, res) => res.render('home'));
+app.get('/smoothies', requireAuth, (req, res) => res.render('smoothies'));
+app.use(authRoutes);
