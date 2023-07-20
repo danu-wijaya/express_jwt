@@ -1,53 +1,66 @@
-const User = require("../models/User"); // Mengimpor model User dari berkas '../models/User'
+const User = require("../models/User");
+const jwt = require('jsonwebtoken');
 
-// Fungsi untuk menangani error
+// handle errors
 const handleErrors = (err) => {
-  console.log(err.message, err.code); // Mencetak pesan error dan kode error ke konsol
-  let errors = { email: '', password: '' }; // Objek untuk menyimpan pesan error terkait email dan password
+  console.log(err.message, err.code);
+  let errors = { email: '', password: '' };
 
-  // Error duplikasi email
-  if (err.code === 11000) { // Jika kode error adalah 11000 (duplikasi)
-    errors.email = 'that email is already registered'; // Atur pesan error pada properti email
-    return errors; // Mengembalikan objek errors yang berisi pesan error
+  // duplicate email error
+  if (err.code === 11000) {
+    errors.email = 'that email is already registered';
+    return errors;
   }
 
-  // Error validasi
-  if (err.message.includes('user validation failed')) { // Jika pesan error berisi "user validation failed"
+  // validation errors
+  if (err.message.includes('user validation failed')) {
+    // console.log(err);
     Object.values(err.errors).forEach(({ properties }) => {
-      errors[properties.path] = properties.message; // Atur pesan error pada properti yang sesuai dengan field (path) yang salah
+      // console.log(val);
+      // console.log(properties);
+      errors[properties.path] = properties.message;
     });
   }
 
-  return errors; // Mengembalikan objek errors yang berisi pesan error
+  return errors;
+}
+
+// create json web token
+const maxAge = 3 * 24 * 60 * 60;
+const createToken = (id) => {
+  return jwt.sign({ id }, 'net ninja secret', {
+    expiresIn: maxAge
+  });
 };
 
-// Controller untuk menampilkan halaman signup (GET request)
+// controller actions
 module.exports.signup_get = (req, res) => {
-  res.render('signup'); // Merender halaman "signup" untuk ditampilkan ke pengguna
-};
+  res.render('signup');
+}
 
-// Controller untuk menampilkan halaman login (GET request)
 module.exports.login_get = (req, res) => {
-  res.render('login'); // Merender halaman "login" untuk ditampilkan ke pengguna
-};
+  res.render('login');
+}
 
-// Controller untuk memproses data saat signup (POST request)
 module.exports.signup_post = async (req, res) => {
-  const { email, password } = req.body; // Mendapatkan data email dan password dari body request
+  const { email, password } = req.body;
 
   try {
-    const user = await User.create({ email, password }); // Membuat user baru dengan menggunakan model User
-    res.status(201).json(user); // Mengirim respons berhasil dengan kode status 201 dan data user dalam format JSON
-  } catch (err) {
-    const errors = handleErrors(err); // Memanggil fungsi handleErrors untuk menangani error yang terjadi
-    res.status(400).json({ errors }); // Mengirim respons error dengan kode status 400 dan objek errors yang berisi pesan error
+    const user = await User.create({ email, password });
+    const token = createToken(user._id);
+    res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
+    res.status(201).json({ user: user._id });
   }
-};
+  catch(err) {
+    const errors = handleErrors(err);
+    res.status(400).json({ errors });
+  }
+ 
+}
 
-// Controller untuk memproses data saat login (POST request)
 module.exports.login_post = async (req, res) => {
-  const { email, password } = req.body; // Mendapatkan data email dan password dari body request
+  const { email, password } = req.body;
 
-  console.log(email, password); // Mencetak data email dan password ke konsol
-  res.send('user login'); // Mengirim respons "user login"
-};
+  console.log(email, password);
+  res.send('user login');
+}
